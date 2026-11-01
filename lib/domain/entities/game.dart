@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 enum GameGenre {
@@ -39,15 +40,16 @@ class Game {
 
   Color get coverColor => Color(int.parse('FF$color', radix: 16));
 
-  factory Game.fromJson(Map<String, dynamic> json) {
+  factory Game.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
     return Game(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String,
-      genre: GameGenre.values.byName(json['genre'] as String),
-      description: json['description'] as String?,
-      color: json['color'] as String,
-      coverLetter: json['coverLetter'] as String,
+      id: doc.id,
+      title: data['title'] as String,
+      subtitle: data['subtitle'] as String,
+      genre: GameGenre.values.byName(data['genre'] as String),
+      description: data['description'] as String?,
+      color: data['color'] as String,
+      coverLetter: data['coverLetter'] as String,
     );
   }
 
