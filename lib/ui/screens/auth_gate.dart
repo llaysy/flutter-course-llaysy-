@@ -1,6 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../bloc/auth/auth_cubit.dart';
+import '../../bloc/auth/auth_state.dart';
+import '../../bloc/catalog/catalog_bloc.dart';
+import '../../bloc/catalog/catalog_event.dart';
+import '../../data/repositories/catalog_repository.dart';
 import 'catalog_screen.dart';
 import 'login_screen.dart';
 
@@ -9,18 +14,26 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, state) {
+        switch (state.status) {
+          case AuthStatus.unknown:
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          case AuthStatus.authenticated:
+            final user = state.user!;
+            return BlocProvider<CatalogBloc>(
+              key: ValueKey(user.uid),
+              create: (context) => CatalogBloc(
+                repository: context.read<CatalogRepository>(),
+                uid: user.uid,
+              )..add(const CatalogStarted()),
+              child: const CatalogScreen(),
+            );
+          case AuthStatus.unauthenticated:
+            return const LoginScreen();
         }
-        if (snapshot.hasData) {
-          return const CatalogScreen();
-        }
-        return const LoginScreen();
       },
     );
   }
