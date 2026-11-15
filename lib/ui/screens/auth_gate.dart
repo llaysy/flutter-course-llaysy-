@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../bloc/catalog/catalog_bloc.dart';
+import '../../bloc/catalog/catalog_event.dart';
 import 'catalog_screen.dart';
 import 'login_screen.dart';
 
@@ -18,7 +21,10 @@ class AuthGate extends StatelessWidget {
           );
         }
         if (snapshot.hasData) {
-          return const CatalogScreen();
+          return BlocProvider<CatalogBloc>(
+            create: (_) => CatalogBloc()..add(CatalogLoadRequested()),
+            child: const CatalogScreen(),
+          );
         }
         return const LoginScreen();
       },

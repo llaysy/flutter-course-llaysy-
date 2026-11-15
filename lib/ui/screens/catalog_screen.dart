@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../bloc/catalog/catalog_bloc.dart';
+import '../../bloc/catalog/catalog_event.dart';
+import '../../bloc/catalog/catalog_state.dart';
 import '../../domain/entities/game.dart';
 import '../widgets/game_card.dart';
 
@@ -15,10 +19,6 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  final _gamesStream = FirebaseFirestore.instance
-      .collection(_collectionName)
-      .snapshots();
-
   final Set<String> _likedIds = {};
   bool _onlyLiked = false;
 
@@ -111,27 +111,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ],
       ),
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _gamesStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
+        child: BlocBuilder<CatalogBloc, CatalogState>(
+          builder: (context, state) {
+            if (state is CatalogLoadInProgress) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is CatalogLoadFailure) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Ошибка: ${snapshot.error}',
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(state.message, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.read<CatalogBloc>().add(
+                          CatalogLoadRequested(),
+                        ),
+                        child: const Text('Обновить'),
+                      ),
+                    ],
                   ),
                 ),
               );
             }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
 
-            final games = snapshot.data!.docs
-                .map((doc) => Game.fromFirestore(doc))
-                .toList();
+            final games = (state as CatalogLoadSuccess).games;
             final visibleGames = _onlyLiked
                 ? games.where((g) => _likedIds.contains(g.id)).toList()
                 : games;
